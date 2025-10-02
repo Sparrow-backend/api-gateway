@@ -1,5 +1,4 @@
 const express = require('express')
-const {createProxyMiddleware} = require('http-proxy-middleware')
 const cors = require('cors')
 
 const app = express()
@@ -22,30 +21,48 @@ app.get('/health', (req, res) => {
     res.json({message: "API Gateway is running.."})
 })
 
-app.use('/api/consolidations', createProxyMiddleware({
-    target: process.env.CONSOLIDATION_SERVICE_URL || 'https://consolidation-service.vercel.app/',
-    changeOrigin: true,
-    pathRewrite: {'^/api/consolidations': ''}
-}))
+// Manual proxy function
+const proxyRequest = async (req, res, targetUrl) => {
+    try {
+        const path = req.originalUrl.replace(/^\/api\/[^\/]+/, '') || '/'
+        const url = new URL(path, targetUrl)
+        
+        const response = await fetch(url.toString(), {
+            method: req.method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...req.headers
+            },
+            body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
+        })
 
-app.use('/api/parcels', createProxyMiddleware({
-    target: process.env.PARCEL_SERVICE_URL || 'https://parcel-service-sigma.vercel.app',
-    changeOrigin: true,
-    pathRewrite: {'^/api/parcels': ''}
-}))
+        const data = await response.json()
+        res.status(response.status).json(data)
+    } catch (error) {
+        console.error('Proxy error:', error)
+        res.status(500).json({ error: 'Proxy request failed', message: error.message })
+    }
+}
 
-app.use('/api/users', createProxyMiddleware({
-    target: process.env.USER_SERVICE_URL || 'https://user-service-tau.vercel.app',
-    changeOrigin: true,
-    pathRewrite: {'^/api/users': ''}
-}))
+// Route handlers - use regex for wildcard matching
+app.use('/api/consolidations', (req, res) => {
+    const target = process.env.CONSOLIDATION_SERVICE_URL || 'https://consolidation-service.vercel.app'
+    proxyRequest(req, res, target)
+})
 
-app.use('/api/warehouses', createProxyMiddleware({
-    target: process.env.WAREHOUSE_SERVICE_URL || 'https://user-service-u11r.vercel.app',
-    changeOrigin: true,
-    pathRewrite: {'^/api/warehouses': ''}
-}))
+app.use('/api/parcels', (req, res) => {
+    const target = process.env.PARCEL_SERVICE_URL || 'https://parcel-service-sigma.vercel.app'
+    proxyRequest(req, res, target)
+})
 
+app.use('/api/users', (req, res) => {
+    const target = process.env.USER_SERVICE_URL || 'https://user-service-tau.vercel.app'
+    proxyRequest(req, res, target)
+})
 
+app.use('/api/warehouses', (req, res) => {
+    const target = process.env.WAREHOUSE_SERVICE_URL || 'https://user-service-u11r.vercel.app'
+    proxyRequest(req, res, target)
+})
 
 module.exports = app
