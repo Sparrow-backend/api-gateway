@@ -1,5 +1,7 @@
 const express = require('express')
 const cors = require('cors')
+const cookieParser = require('cookie-parser')
+const jwt = require('jsonwebtoken')
 
 const app = express()
 
@@ -11,7 +13,39 @@ app.use(cors({
     ]
 }))
 
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Credentials", "true");
+    next();
+})
+
 app.use(express.json())
+app.use(cookieParser())
+
+
+app.get('/check-cookie', (req, res) => {
+    try {
+        const token = req.cookies?.token;
+        if (!token) {
+            return res.status(401).json({message: 'Unauthorized: No token provided'})
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return res.json({role: decoded.role, id: decoded.id})
+
+    } catch(err) {
+        console.error('Error in verifying token: ', err.message)
+        return res.status(401).json({message: 'Unauthorized: Invalid or expired token'})
+    }
+})
+
+app.post('/logout', (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none'
+    });
+    res.json({message: 'Logged out successfully!'})
+})
 
 app.get('/', (req, res) => {
     res.json({message: "Sparrow: API Gateway"})
@@ -21,7 +55,7 @@ app.get('/health', (req, res) => {
     res.json({message: "API Gateway is running.."})
 })
 
-// Manual proxy function
+
 const proxyRequest = async (req, res, targetUrl) => {
     try {
         const path = req.originalUrl.replace(/^\/api\/[^\/]+/, '') || '/'
@@ -44,7 +78,6 @@ const proxyRequest = async (req, res, targetUrl) => {
     }
 }
 
-// Route handlers - use regex for wildcard matching
 app.use('/api/consolidations', (req, res) => {
     const target = process.env.CONSOLIDATION_SERVICE_URL || 'https://consolidation-service.vercel.app'
     proxyRequest(req, res, target)
@@ -63,6 +96,16 @@ app.use('/api/users', (req, res) => {
 app.use('/api/warehouses', (req, res) => {
     const target = process.env.WAREHOUSE_SERVICE_URL || 'https://user-service-u11r.vercel.app'
     proxyRequest(req, res, target)
+})
+
+app.use((req, res) => {
+    console.warn(`404 Error: ${req.method} ${req.url}`)
+    res.status(404).json({message: 'Route not found'})
+})
+
+app.use((err, req, res, next) => {
+    console.error('Unhandled server error: ', err.stack || err.message)
+    res.status(500).json({message: 'Internal Server Error'})
 })
 
 module.exports = app
