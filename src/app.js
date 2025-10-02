@@ -14,6 +14,10 @@ app.use(cors({
 
 app.use(express.json())
 
+app.get('/', (req, res) => {
+    res.json({message: "Sparrow: API Gateway"})
+})
+
 app.get('/health', (req, res) => {
     res.json({message: "API Gateway is running.."})
 })
