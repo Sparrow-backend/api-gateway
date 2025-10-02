@@ -23,25 +23,25 @@ app.get('/health', (req, res) => {
 })
 
 app.use('/api/consolidations', createProxyMiddleware({
-    target: process.env.CONSOLIDATION_SERVICE_URL || 'http://localhost:8001',
+    target: process.env.CONSOLIDATION_SERVICE_URL || 'https://consolidation-service.vercel.app/',
     changeOrigin: true,
     pathRewrite: {'^/api/consolidations': ''}
 }))
 
 app.use('/api/parcels', createProxyMiddleware({
-    target: process.env.PARCEL_SERVICE_URL || 'http://localhost:8002',
+    target: process.env.PARCEL_SERVICE_URL || 'https://parcel-service-sigma.vercel.app',
     changeOrigin: true,
     pathRewrite: {'^/api/parcels': ''}
 }))
 
 app.use('/api/users', createProxyMiddleware({
-    target: process.env.USER_SERVICE_URL || 'http://localhost:8003',
+    target: process.env.USER_SERVICE_URL || 'https://user-service-tau.vercel.app',
     changeOrigin: true,
     pathRewrite: {'^/api/users': ''}
 }))
 
 app.use('/api/warehouses', createProxyMiddleware({
-    target: process.env.WAREHOUSE_SERVICE_URL || 'http://localhost:8004',
+    target: process.env.WAREHOUSE_SERVICE_URL || 'https://user-service-u11r.vercel.app',
     changeOrigin: true,
     pathRewrite: {'^/api/warehouses': ''}
 }))
