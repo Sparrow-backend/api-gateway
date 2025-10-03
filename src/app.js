@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const fetch = require('node-fetch'); // make sure this is installed
 
 const app = express();
 
@@ -54,21 +55,24 @@ app.get('/', (req, res) => res.json({ message: "Sparrow: API Gateway" }));
 app.get('/health', (req, res) => res.json({ message: "API Gateway is running.." }));
 
 // --- Proxy helper ---
+
 const proxyRequest = async (req, res, targetUrl) => {
     try {
         const path = req.originalUrl.replace(/^\/api\/[^\/]+/, '') || '/';
         const url = new URL(path, targetUrl);
 
+        // Copy headers except host
         const headers = { ...req.headers };
         delete headers['host'];
 
         const fetchOptions = { method: req.method, headers };
 
+        // Only attach body for non-GET/HEAD
         if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
             const bodyString = JSON.stringify(req.body);
             fetchOptions.body = bodyString;
             fetchOptions.headers['Content-Type'] = 'application/json';
-            fetchOptions.headers['Content-Length'] = Buffer.byteLength(bodyString).toString();
+            // ❌ Do not set Content-Length manually (fetch sets it automatically)
         }
 
         console.log(`Proxying ${req.method} ${req.originalUrl} -> ${url.toString()}`);
@@ -83,11 +87,13 @@ const proxyRequest = async (req, res, targetUrl) => {
             data = await response.text();
         }
 
+        // Forward set-cookie if present
         const setCookieHeader = response.headers.get('set-cookie');
         if (setCookieHeader) {
             res.setHeader('Set-Cookie', setCookieHeader);
         }
 
+        // Send back response in correct format
         if (typeof data === 'string') {
             res.status(response.status).send(data);
         } else {
@@ -102,6 +108,7 @@ const proxyRequest = async (req, res, targetUrl) => {
         });
     }
 };
+
 
 // --- Proxy routes ---
 app.use('/api/consolidations', (req, res) => {
