@@ -19,6 +19,12 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+})
+
 // --- Auth check (this needs JSON, so re-parse safely) ---
 app.get('/check-cookie', (req, res) => {
   try {
