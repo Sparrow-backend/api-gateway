@@ -61,20 +61,57 @@ const proxyRequest = async (req, res, targetUrl) => {
         const path = req.originalUrl.replace(/^\/api\/[^\/]+/, '') || '/'
         const url = new URL(path, targetUrl)
         
-        const response = await fetch(url.toString(), {
-            method: req.method,
-            headers: {
-                'Content-Type': 'application/json',
-                ...req.headers
-            },
-            body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
-        })
+        // Prepare headers
+        const headers = {
+            'Content-Type': 'application/json',
+        }
+        
+        // Copy cookies if present
+        if (req.headers.cookie) {
+            headers['Cookie'] = req.headers.cookie
+        }
 
-        const data = await response.json()
+        // Prepare fetch options
+        const fetchOptions = {
+            method: req.method,
+            headers: headers
+        }
+
+        // Only add body for methods that support it
+        if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
+            const bodyString = JSON.stringify(req.body)
+            fetchOptions.body = bodyString
+            fetchOptions.headers['Content-Length'] = Buffer.byteLength(bodyString).toString()
+        }
+
+        console.log(`Proxying ${req.method} ${req.originalUrl} -> ${url.toString()}`)
+
+        const response = await fetch(url.toString(), fetchOptions)
+        
+        // Handle non-JSON responses
+        const contentType = response.headers.get('content-type')
+        let data
+        
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json()
+        } else {
+            data = await response.text()
+        }
+
+        // Copy cookies from backend to client
+        const setCookieHeader = response.headers.get('set-cookie')
+        if (setCookieHeader) {
+            res.setHeader('Set-Cookie', setCookieHeader)
+        }
+
         res.status(response.status).json(data)
     } catch (error) {
         console.error('Proxy error:', error)
-        res.status(500).json({ error: 'Proxy request failed', message: error.message })
+        res.status(500).json({ 
+            error: 'Proxy request failed', 
+            message: error.message,
+            details: error.cause?.message 
+        })
     }
 }
 
