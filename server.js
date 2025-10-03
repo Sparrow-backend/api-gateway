@@ -1,30 +1,28 @@
+const dotenv = require('dotenv');
+const http = require('http');
+const app = require('./src/app');
 
-const {createProxyMiddleware} = require('http-proxy-middleware')
-const cors = require('cors')
-const dotenv = require('dotenv')
-const http = require('http')
-const app = require('./src/app')
+dotenv.config();
 
-dotenv.config()
+const PORT = process.env.PORT || 8000;
 
-const PORT = process.env.PORT || 8000
+// Only start the server if NOT running in Vercel serverless
+if (process.env.VERCEL !== '1') {
+    const server = http.createServer(app);
 
-const server = http.createServer(app)
-
-async function createServer() {
-    try {
-        
-        server.listen(PORT, () => {
-            console.log(`Server listening on port ${PORT}..`)
-        })
-
-        
-    } catch(err) {
-        console.error('Internal server error: ', err)
-        process.exit(1)
+    async function createServer() {
+        try {
+            server.listen(PORT, () => {
+                console.log(`Server listening on port ${PORT}..`);
+            });
+        } catch (err) {
+            console.error('Internal server error: ', err);
+            process.exit(1);
+        }
     }
+
+    createServer();
 }
 
-createServer()
-
-
+// Export app for Vercel
+module.exports = app;
