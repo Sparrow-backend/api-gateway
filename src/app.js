@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
+const fetch = require('node-fetch'); // add this
 
 const app = express()
 
@@ -56,64 +57,57 @@ app.get('/health', (req, res) => {
 })
 
 
+
 const proxyRequest = async (req, res, targetUrl) => {
     try {
-        const path = req.originalUrl.replace(/^\/api\/[^\/]+/, '') || '/'
-        const url = new URL(path, targetUrl)
-        
-        // Prepare headers
-        const headers = {
-            'Content-Type': 'application/json',
-        }
-        
-        // Copy cookies if present
-        if (req.headers.cookie) {
-            headers['Cookie'] = req.headers.cookie
-        }
+        const path = req.originalUrl.replace(/^\/api\/[^\/]+/, '') || '/';
+        const url = new URL(path, targetUrl);
 
-        // Prepare fetch options
-        const fetchOptions = {
-            method: req.method,
-            headers: headers
-        }
+        const headers = { ...req.headers };
+        delete headers['host']; // avoid host mismatch
 
-        // Only add body for methods that support it
+        const fetchOptions = { method: req.method, headers };
+
         if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
-            const bodyString = JSON.stringify(req.body)
-            fetchOptions.body = bodyString
-            fetchOptions.headers['Content-Length'] = Buffer.byteLength(bodyString).toString()
+            const bodyString = JSON.stringify(req.body);
+            fetchOptions.body = bodyString;
+            fetchOptions.headers['Content-Type'] = 'application/json';
+            fetchOptions.headers['Content-Length'] = Buffer.byteLength(bodyString).toString();
         }
 
-        console.log(`Proxying ${req.method} ${req.originalUrl} -> ${url.toString()}`)
+        console.log(`Proxying ${req.method} ${req.originalUrl} -> ${url.toString()}`);
 
-        const response = await fetch(url.toString(), fetchOptions)
-        
-        // Handle non-JSON responses
-        const contentType = response.headers.get('content-type')
-        let data
-        
+        const response = await fetch(url.toString(), fetchOptions);
+        const contentType = response.headers.get('content-type');
+
+        let data;
         if (contentType && contentType.includes('application/json')) {
-            data = await response.json()
+            data = await response.json();
         } else {
-            data = await response.text()
+            data = await response.text();
         }
 
-        // Copy cookies from backend to client
-        const setCookieHeader = response.headers.get('set-cookie')
+        const setCookieHeader = response.headers.get('set-cookie');
         if (setCookieHeader) {
-            res.setHeader('Set-Cookie', setCookieHeader)
+            res.setHeader('Set-Cookie', setCookieHeader);
         }
 
-        res.status(response.status).json(data)
+        // Return correct type
+        if (typeof data === 'string') {
+            res.status(response.status).send(data);
+        } else {
+            res.status(response.status).json(data);
+        }
     } catch (error) {
-        console.error('Proxy error:', error)
-        res.status(500).json({ 
-            error: 'Proxy request failed', 
+        console.error('Proxy error:', error);
+        res.status(500).json({
+            error: 'Proxy request failed',
             message: error.message,
-            details: error.cause?.message 
-        })
+            details: error.cause?.message
+        });
     }
-}
+};
+
 
 app.use('/api/consolidations', (req, res) => {
     const target = process.env.CONSOLIDATION_SERVICE_URL || 'https://consolidation-service.vercel.app'
