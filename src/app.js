@@ -19,7 +19,6 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
-
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Credentials", "true");
   next();
@@ -94,6 +93,9 @@ const proxyRequest = async (req, res, targetUrl) => {
 app.use('/api/consolidations', (req, res) =>
   proxyRequest(req, res, process.env.CONSOLIDATION_SERVICE_URL || 'https://consolidation-service.vercel.app')
 );
+app.use('/api/deliveries', (req, res) =>
+  proxyRequest(req, res, process.env.CONSOLIDATION_SERVICE_URL || 'https://consolidation-service.vercel.app')
+);
 app.use('/api/parcels', (req, res) =>
   proxyRequest(req, res, process.env.PARCEL_SERVICE_URL || 'https://parcel-service-sigma.vercel.app')
 );
@@ -102,6 +104,12 @@ app.use('/api/users', (req, res) =>
 );
 app.use('/api/warehouses', (req, res) =>
   proxyRequest(req, res, process.env.WAREHOUSE_SERVICE_URL || 'https://warehouse-service-seven.vercel.app')
+);
+app.use('/api/notifications', (req, res) =>
+  proxyRequest(req, res, process.env.NOTIFICATION_SERVICE_URL || 'https://notification-service.vercel.app')
+);
+app.use('/api/preferences', (req, res) =>
+  proxyRequest(req, res, process.env.NOTIFICATION_SERVICE_URL || 'https://notification-service.vercel.app')
 );
 
 // --- Error handlers ---
