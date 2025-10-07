@@ -107,10 +107,10 @@ app.use('/api/warehouses', (req, res) =>
   proxyRequest(req, res, process.env.WAREHOUSE_SERVICE_URL || 'https://warehouse-service-seven.vercel.app')
 );
 app.use('/api/notifications', (req, res) =>
-  proxyRequest(req, res, process.env.NOTIFICATION_SERVICE_URL || 'https://notification-service.vercel.app')
+  proxyRequest(req, res, process.env.NOTIFICATION_SERVICE_URL || 'https://notification-service-indol.vercel.app')
 );
 app.use('/api/preferences', (req, res) =>
-  proxyRequest(req, res, process.env.NOTIFICATION_SERVICE_URL || 'https://notification-service.vercel.app')
+  proxyRequest(req, res, process.env.NOTIFICATION_SERVICE_URL || 'https://notification-service-indol.vercel.app')
 );
 
 // --- Error handlers ---
