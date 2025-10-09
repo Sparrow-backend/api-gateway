@@ -97,6 +97,9 @@ app.use('/api/consolidations', (req, res) =>
 app.use('/api/deliveries', (req, res) =>
   proxyRequest(req, res, process.env.CONSOLIDATION_SERVICE_URL || 'https://consolidation-service.vercel.app')
 );
+app.use('/api/pricing', (req, res) =>
+  proxyRequest(req, res, process.env.CONSOLIDATION_SERVICE_URL || 'https://pricing-service-nu.vercel.app/')
+);
 app.use('/api/parcels', (req, res) =>
   proxyRequest(req, res, process.env.PARCEL_SERVICE_URL || 'https://parcel-service-sigma.vercel.app')
 );
